@@ -72,6 +72,92 @@ After this integration is set up, you can configure the color of your Vestaboard
 | Flagship | <img alt="Flagship Black Connected" src="images/flagship-black.png" width="100%"> | <img alt="Flagship White Connected" src="images/flagship-white.png" width="100%"> |
 | Note     |     <img alt="Note Black Connected" src="images/note-black.png" width="70%">      |     <img alt="Note White Connected" src="images/note-white.png" width="70%">      |
 
+## Actions
+
+### `vestaboard.message` - Send a message to one or more Vestaboards
+
+[![Open your Home Assistant instance and show your service developer tools with a specific action selected.](https://my.home-assistant.io/badges/developer_call_service.svg)](https://my.home-assistant.io/redirect/developer_call_service/?service=vestaboard.message)
+
+#### Fields
+
+| Field                | Name                       | Required | Description                                                                                                                                                                       |
+| -------------------- | -------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `device_id`          | Device                     | ✅ Yes   | The Vestaboard device(s) to send the message to. Supports multiple devices.                                                                                                       |
+| `message`            | Message                    | No       | Plain text message to display. Supports multiline input.                                                                                                                          |
+| `justify`            | Justify                    | No       | Horizontal text alignment. Default: `center`. Options: `left`, `right`, `center`, `justified`.                                                                                    |
+| `align`              | Align                      | No       | Vertical text alignment. Default: `center`. Options: `top`, `bottom`, `center`, `justified`.                                                                                      |
+| `vbml`               | Vestaboard Markup Language | No       | Compose a static or dynamic message using [VBML](https://docs.vestaboard.com/docs/vbml). Overrides `message` when provided.                                                       |
+| `strategy`           | Transition Strategy        | No       | Animation style when a new message is sent. Options: `classic`, `column`, `reverse-column`, `edges-to-center`, `row`, `diagonal`, `random`.                                       |
+| `step_size`          | Step Size                  | No       | Number of columns/rows/bits to animate simultaneously. Range: 1–132. Leave blank to animate one at a time.                                                                        |
+| `step_interval_ms`   | Step Interval              | No       | Delay (in milliseconds) between each animation step. Range: 1–3000 ms. Leave blank for immediate sequential activation.                                                           |
+| `duration`           | Duration                   | No       | Display the message temporarily for the specified duration (in seconds). The board reverts to its previous persistent message when the duration expires. Range: 10–43200 seconds. |
+| `bypass_quiet_hours` | Bypass Quiet Hours         | No       | If `true`, ignores quiet hours settings and sends the message immediately.                                                                                                        |
+
+---
+
+#### Examples
+
+**Send a simple text message:**
+
+```yaml
+action: vestaboard.message
+data:
+  device_id: your_device_id
+  message: "Hello, world!"
+  justify: center
+  align: center
+```
+
+**Send a temporary message with a transition animation:**
+
+```yaml
+action: vestaboard.message
+data:
+  device_id: your_device_id
+  message: "Dinner is ready!"
+  strategy: column
+  step_interval_ms: 500
+  duration: 120
+```
+
+**Send a dynamic VBML message:**
+
+```yaml
+action: vestaboard.message
+data:
+  device_id: your_device_id
+  vbml: >
+    {
+      "props": { "hours": "07", "minutes": "35" },
+      "components": [{
+        "style": { "justify": "center", "align": "center" },
+        "template": "{{ '{{hours}}:{{minutes}}' }}"
+      }]
+    }
+```
+
+Note: The outer "{{ }}" escapes the inner VBML template syntax in the example above.
+
+**Send to multiple devices, bypassing quiet hours:**
+
+```yaml
+action: vestaboard.message
+data:
+  device_id:
+    - device_id_1
+    - device_id_2
+  message: "Good morning!"
+  bypass_quiet_hours: true
+```
+
+---
+
+#### Notes
+
+- Either `message` or `vbml` should be provided, but not both. `vbml` takes precedence if both are given.
+- `step_size` and `step_interval_ms` only apply when a `strategy` is specified.
+- `duration` is useful for transient alerts - the board will restore its last persistent message automatically after the duration expires.
+
 ---
 
 ## ❤️ Support Me
