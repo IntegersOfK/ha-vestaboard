@@ -182,9 +182,11 @@ class VestaboardConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self.host = user_input[CONF_HOST]
             self.api_key = reconfigure_entry.data[CONF_API_KEY]
-            if not (errors := await self.validate_client(
-                {CONF_API_KEY: self.api_key}, write=False
-            )):
+            if not (
+                errors := await self.validate_client(
+                    {CONF_API_KEY: self.api_key}, write=False
+                )
+            ):
                 return self.async_update_reload_and_abort(
                     reconfigure_entry,
                     data_updates={CONF_HOST: self.host},
