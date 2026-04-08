@@ -134,8 +134,13 @@ class VestaboardConfigFlow(ConfigFlow, domain=DOMAIN):
                         data_updates={CONF_HOST: self.host},
                         reason="already_configured",
                     )
-            except Exception:  # pylint: disable=broad-except
-                pass
+            except Exception as ex:  # pylint: disable=broad-except
+                _LOGGER.debug(
+                    "Failed to probe entry %s at %s during DHCP discovery: %s",
+                    entry.entry_id,
+                    self.host,
+                    ex,
+                )
 
         return await self.async_step_api_key()
 
