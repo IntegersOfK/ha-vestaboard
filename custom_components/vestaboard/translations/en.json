@@ -19,6 +19,14 @@
           "api_key": "API Key",
           "enablement_token": "The API key provided is an enablement token and should be used to request a new API key from the board. If you have already performed this step in the past, here or elsewhere, it is strongly encouraged that you use the existing API key. Otherwise, any attempt to read or write with old API keys will fail."
         }
+      },
+      "reconfigure": {
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "Update the IP address or hostname if your Vestaboard has connected on a different network interface and its address has changed."
+        }
       }
     },
     "error": {
@@ -30,20 +38,17 @@
     },
     "abort": {
       "already_configured": "Device is already configured",
-      "reauth_successful": "Re-authentication was successful"
+      "reauth_successful": "Re-authentication was successful",
+      "reconfigure_successful": "Re-configuration was successful"
     }
   },
   "options": {
     "step": {
       "init": {
         "data": {
-          "host": "Host",
           "model": "Select your Vestaboard color to change the image that is generated",
           "quiet_start": "Quiet hours start time",
           "quiet_end": "Quiet hours end time"
-        },
-        "data_description": {
-          "host": "Update the IP address or hostname if your Vestaboard has connected on a different network interface and its address has changed."
         },
         "sections": {
           "strategy": {
@@ -62,11 +67,6 @@
           }
         }
       }
-    },
-    "error": {
-      "invalid_host": "Invalid hostname or IP address",
-      "timeout_connect": "Timeout establishing connection",
-      "unknown": "Unexpected error"
     }
   },
   "entity": {

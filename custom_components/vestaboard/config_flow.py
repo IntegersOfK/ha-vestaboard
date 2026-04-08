@@ -10,12 +10,13 @@ from aiohttp import ClientConnectorError
 import voluptuous as vol
 
 from homeassistant.components import dhcp
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.const import CONF_API_KEY, CONF_HOST
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult, section
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
+    SchemaOptionsFlowHandler,
 )
 from homeassistant.helpers.selector import (
     NumberSelector,
@@ -107,9 +108,9 @@ class VestaboardConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(
         config_entry: ConfigEntry,
-    ) -> VestaboardOptionsFlowHandler:
+    ) -> SchemaOptionsFlowHandler:
         """Get the options flow for this handler."""
-        return VestaboardOptionsFlowHandler()
+        return SchemaOptionsFlowHandler(config_entry, OPTIONS_FLOW)
 
     async def async_step_dhcp(self, discovery_info: dhcp.DhcpServiceInfo) -> FlowResult:
         """Handle dhcp discovery."""
@@ -170,6 +171,34 @@ class VestaboardConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Perform reauth upon an API key error."""
         return await self._async_step("reauth_confirm", STEP_API_KEY_SCHEMA, user_input)
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle reconfiguration to update the host."""
+        reconfigure_entry = self._get_reconfigure_entry()
+        errors = {}
+
+        if user_input is not None:
+            self.host = user_input[CONF_HOST]
+            self.api_key = reconfigure_entry.data[CONF_API_KEY]
+            if not (errors := await self.validate_client(
+                {CONF_API_KEY: self.api_key}, write=False
+            )):
+                return self.async_update_reload_and_abort(
+                    reconfigure_entry,
+                    data_updates={CONF_HOST: self.host},
+                    reason="reconfigure_successful",
+                )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema({vol.Required(CONF_HOST): str}),
+                {CONF_HOST: reconfigure_entry.data[CONF_HOST]},
+            ),
+            errors=errors,
+        )
 
     async def _async_step(
         self, step_id: str, schema: vol.Schema, user_input: dict[str, Any] | None = None
@@ -263,59 +292,3 @@ class VestaboardConfigFlow(ConfigFlow, domain=DOMAIN):
                             reason="already_configured",
                         )
         return None
-
-
-class VestaboardOptionsFlowHandler(OptionsFlow):
-    """Handle options flow for Vestaboard."""
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Manage the options."""
-        errors: dict[str, str] = {}
-        current_host = self.config_entry.data[CONF_HOST]
-
-        if user_input is not None:
-            new_host = user_input.get(CONF_HOST, current_host)
-            if new_host != current_host:
-                try:
-                    client = await create_client(
-                        self.hass,
-                        {
-                            CONF_HOST: new_host,
-                            CONF_API_KEY: self.config_entry.data[CONF_API_KEY],
-                        },
-                    )
-                    if await client.check_endpoint() == EndpointStatus.UNKNOWN:
-                        errors[CONF_HOST] = "invalid_host"
-                except asyncio.TimeoutError:
-                    errors[CONF_HOST] = "timeout_connect"
-                except ClientConnectorError:
-                    errors[CONF_HOST] = "invalid_host"
-                except Exception as ex:  # pylint: disable=broad-except
-                    _LOGGER.error(ex)
-                    errors["base"] = "unknown"
-
-            if not errors:
-                if new_host != current_host:
-                    self.hass.config_entries.async_update_entry(
-                        self.config_entry,
-                        data={**self.config_entry.data, CONF_HOST: new_host},
-                    )
-                return self.async_create_entry(
-                    data={k: v for k, v in user_input.items() if k != CONF_HOST}
-                )
-
-        combined_schema = vol.Schema({vol.Required(CONF_HOST): str}).extend(
-            OPTIONS_SCHEMA.schema
-        )
-        suggested = (
-            user_input
-            if user_input is not None
-            else {CONF_HOST: current_host, **self.config_entry.options}
-        )
-        return self.async_show_form(
-            step_id="init",
-            data_schema=self.add_suggested_values_to_schema(combined_schema, suggested),
-            errors=errors,
-        )
